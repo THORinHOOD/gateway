@@ -37,15 +37,14 @@ public class TestController {
         return new ResponseEntity<>(token, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole('ROLE_USER')")
-    @GetMapping("/hi")
-    public ResponseEntity<String> greet() {
-        return new ResponseEntity<>("hello world", HttpStatus.OK);
-    }
-
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    @GetMapping("/bye")
-    public ResponseEntity<String> bye() {
-        return new ResponseEntity<>("bye world", HttpStatus.OK);
+    @PostMapping("/validate_token")
+    public ResponseEntity<UserDto> validateToken(@RequestBody String token) {
+        String login = jwtProvider.getLoginFromToken(token);
+        Optional<UserDto> user = userService.findByLogin(login);
+        if (user.isPresent()) {
+            user.get().setPassword("");
+            return new ResponseEntity<>(user.get(), HttpStatus.OK);
+        }
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 }
