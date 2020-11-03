@@ -1,6 +1,7 @@
 package fi.lipp.greatheart.gateway.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import fi.lipp.greatheart.gateway.domain.User;
+import fi.lipp.greatheart.gateway.utils.Response;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
@@ -8,11 +9,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired private UserService userService;
+    private final UserService userService;
+
+    public CustomUserDetailsService(UserService userService) {
+        this.userService = userService;
+    }
 
     @Override
     public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserDto user = userService.findByLogin(username).get();
-        return CustomUserDetails.fromUserDtoToCustomUserDetails(user);
+        Response<User> user = userService.findByLogin(username, true);
+        if (!user.isSuccess()) {
+            throw new UsernameNotFoundException(user.getMessage());
+        }
+        return CustomUserDetails.fromUserDtoToCustomUserDetails(user.getBody());
     }
 }

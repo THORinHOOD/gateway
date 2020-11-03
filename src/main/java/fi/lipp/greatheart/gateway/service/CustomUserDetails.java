@@ -1,26 +1,39 @@
 package fi.lipp.greatheart.gateway.service;
 
-import fi.lipp.greatheart.gateway.domain.UserEntity;
+import fi.lipp.greatheart.gateway.domain.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CustomUserDetails implements UserDetails {
 
-    private String login;
+    private Long id;
     private String password;
+
     private Collection<? extends GrantedAuthority> grantedAuthorities;
 
-    public static CustomUserDetails fromUserDtoToCustomUserDetails(UserDto user) {
+    public static CustomUserDetails fromUserDtoToCustomUserDetails(User user) {
         CustomUserDetails c = new CustomUserDetails();
-        c.login = user.getLogin();
         c.password = user.getPassword();
-        c.grantedAuthorities = user.getRoles().stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        c.id = user.getId();
+        c.grantedAuthorities =Stream.concat(
+            Arrays.stream(user.getCatalogRoleIds()).map(CustomUserDetails::catalog),
+            Arrays.stream(user.getTrackerRoleIds()).map(CustomUserDetails::tracker)
+        ).collect(Collectors.toList());
         return c;
+    }
+
+    private static SimpleGrantedAuthority catalog(Integer roleId) {
+        return new SimpleGrantedAuthority("catalog_role_" + roleId);
+    }
+
+    private static SimpleGrantedAuthority tracker(Integer roleId) {
+        return new SimpleGrantedAuthority("tracker_role_" + roleId);
     }
 
     @Override
@@ -35,7 +48,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return login;
+        return String.valueOf(id);
     }
 
     @Override
@@ -57,4 +70,5 @@ public class CustomUserDetails implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
 }

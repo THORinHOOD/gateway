@@ -21,16 +21,25 @@ import static org.springframework.util.StringUtils.hasText;
 public class JwtFilter extends GenericFilterBean {
 
     private static final String AUTHORIZATION = "Authorization";
-    @Autowired private JwtProvider jwtProvider;
-    @Autowired private CustomUserDetailsService customUserDetailsService;
+
+    private final JwtProvider jwtProvider;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public JwtFilter(JwtProvider jwtProvider,
+                     CustomUserDetailsService customUserDetailsService) {
+        this.jwtProvider = jwtProvider;
+        this.customUserDetailsService = customUserDetailsService;
+    }
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
         String token = getTokenFromRequest((HttpServletRequest) servletRequest);
         if (token != null && jwtProvider.validateToken(token)) {
             String userLogin = jwtProvider.getLoginFromToken(token);
             CustomUserDetails customUserDetails = customUserDetailsService.loadUserByUsername(userLogin);
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(customUserDetails,
+                    null, customUserDetails.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(auth);
         }
         filterChain.doFilter(servletRequest, servletResponse);
@@ -43,4 +52,5 @@ public class JwtFilter extends GenericFilterBean {
         }
         return null;
     }
+
 }

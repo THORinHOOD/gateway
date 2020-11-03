@@ -1,6 +1,9 @@
 package fi.lipp.greatheart.gateway.configuration;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import fi.lipp.greatheart.gateway.repository.UserRepository;
+import fi.lipp.greatheart.gateway.service.CustomUserDetails;
+import fi.lipp.greatheart.gateway.service.CustomUserDetailsService;
+import fi.lipp.greatheart.gateway.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -20,27 +23,27 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
-    @Autowired private JwtFilter jwtFilter;
+    private final JwtFilter jwtFilter;
+
+    public SecurityConfiguration(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
-                .httpBasic().disable()
-                .csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeRequests()
-                .antMatchers("/sign_up", "/sign_in").permitAll()
-                .anyRequest()
-                .authenticated()
-                .and()
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling()
-                    .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), new AntPathRequestMatcher("/**"));
+            .httpBasic().disable()
+            .csrf().disable()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
+            .authorizeRequests()
+            .antMatchers("/sign_up", "/sign_in", "/validate_token").permitAll()
+            .anyRequest()
+            .authenticated()
+            .and()
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling()
+                .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), new AntPathRequestMatcher("/**"));
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
 }
