@@ -1,4 +1,4 @@
-name: Tracker CI
+name: Gateway CI
 
 on:
   push:
