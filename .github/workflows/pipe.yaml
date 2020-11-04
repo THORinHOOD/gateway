@@ -2,9 +2,9 @@ name: Gateway CI
 
 on:
   push:
-    branches: [ asgar ]
+    branches: [ master ]
   pull_request:
-    branches: [ asgar ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -40,18 +40,18 @@ jobs:
         with:
           local: build/libs/gateway-0.0.1.jar
           remote: gateway/gateway-0.0.1.jar
-          host: 80.87.197.233
-          username: root
-          password: RolandPass
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
       - name: Stop previous instance
         if: always()
         uses: fifsky/ssh-action@master
         with:
           command: |
             cd gateway/gateway-0.0.1.jar && kill -9 $(cat application.pid)
-          host: 80.87.197.233
-          user: root
-          pass: RolandPass
+          host: ${{ secrets.HOST }}
+          user: ${{ secrets.SSH_USER }}
+          pass: ${{ secrets.SSH_PASSWORD }}
           args: "-tt"
       - name: Run the application on remote server
         if: always()
@@ -59,7 +59,7 @@ jobs:
         with:
           command: |
             cd gateway/gateway-0.0.1.jar && java -jar gateway-0.0.1.jar &
-          host: 80.87.197.233
-          user: root
-          pass: RolandPass
+          host: ${{ secrets.HOST }}
+          user: ${{ secrets.SSH_USER }}
+          pass: ${{ secrets.SSH_PASSWORD }}
           args: "-tt"
