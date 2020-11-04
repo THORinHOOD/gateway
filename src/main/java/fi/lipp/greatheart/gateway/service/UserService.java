@@ -43,6 +43,20 @@ public class UserService {
         });
     }
 
+    public Response<User> findById(Long id, boolean withPassword) {
+        return Response.EXECUTE(() -> {
+            Optional<User> user = repository.findById(id);
+            if (user.isPresent()) {
+                User result = user.get();
+                if (!withPassword) {
+                    result.setPassword(null);
+                }
+                return Response.OK(user.get());
+            }
+            return Response.BAD("Пользователь с id %d не найден", id);
+        });
+    }
+
     public Response<User> signIn(String login, String password) {
         Response<User> user = this.findByLogin(login, true);
         if (user.isSuccess()) {

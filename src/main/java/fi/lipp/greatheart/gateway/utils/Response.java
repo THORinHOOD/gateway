@@ -12,11 +12,6 @@ public class Response<T> {
                 .setMessage(String.format(message, params));
     }
 
-    public static <BODY> Response<BODY> OK(BODY body, String message, Object... params) {
-        Response<BODY> response = OK(message, params);
-        return response.setBody(body);
-    }
-
     public static <BODY> Response<BODY> OK(BODY body) {
         Response<BODY> response = new Response<>();
         return response.setSuccess(true).setBody(body);
