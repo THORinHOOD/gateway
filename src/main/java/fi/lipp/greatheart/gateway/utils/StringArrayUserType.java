@@ -7,7 +7,7 @@ import org.hibernate.usertype.UserType;
 import java.io.Serializable;
 import java.sql.*;
 
-public class IntArrayUserType implements UserType {
+public class StringArrayUserType implements UserType {
 
     protected static final int[] SQL_TYPES = { Types.ARRAY };
 
@@ -47,10 +47,10 @@ public class IntArrayUserType implements UserType {
             return null;
         }
         if (resultSet.getArray(names[0]) == null) {
-            return new Integer[0];
+            return new String[0];
         }
         Array array = resultSet.getArray(names[0]);
-        Integer[] javaArray = (Integer[]) array.getArray();
+        String[] javaArray = (String[]) array.getArray();
         return javaArray;
     }
 
@@ -62,7 +62,7 @@ public class IntArrayUserType implements UserType {
             statement.setNull(index, SQL_TYPES[0]);
         } else {
             Integer[] castObject = (Integer[]) value;
-            Array array = connection.createArrayOf("int", castObject);
+            Array array = connection.createArrayOf("text", castObject);
             statement.setArray(index, array);
         }
     }
@@ -78,8 +78,8 @@ public class IntArrayUserType implements UserType {
     }
 
     @Override
-    public Class<Integer[]> returnedClass() {
-        return Integer[].class;
+    public Class<String[]> returnedClass() {
+        return String[].class;
     }
 
     @Override

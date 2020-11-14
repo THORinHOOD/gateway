@@ -1,9 +1,8 @@
 package fi.lipp.greatheart.gateway.service;
 
-import fi.lipp.greatheart.gateway.domain.User;
 import fi.lipp.greatheart.gateway.repository.UserRepository;
+import fi.lipp.greatheart.gateway.service.mapper.UserMapper;
 import fi.lipp.greatheart.gateway.utils.Response;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,56 +13,42 @@ public class UserService {
 
     private final UserRepository repository;
     private final PasswordEncoder encoder;
+    private final UserMapper mapper;
 
     public UserService(UserRepository repository,
-                       PasswordEncoder encoder) {
+                       PasswordEncoder encoder,
+                       UserMapper userMapper) {
         this.repository = repository;
         this.encoder = encoder;
+        this.mapper = userMapper;
     }
 
-    public User saveUser(User user, boolean leavePassword) {
-        User savedUser = repository.save(user);
-        if (!leavePassword) {
-            savedUser.setPassword(null);
-        }
-        return savedUser;
-    }
-
-    public Response<User> findByLogin(String login, boolean withPassword) {
-        return Response.EXECUTE(() -> {
-            Optional<User> user = repository.findByLogin(login);
-            if (user.isPresent()) {
-                User result = user.get();
-                if (!withPassword) {
-                    result.setPassword(null);
-                }
-                return Response.OK(user.get());
-            }
-            return Response.BAD("Пользователь с логином %s не найден", login);
+    public Response<UserDto> saveUser(UserDto user) {
+        return Response.EXECUTE_RAW(() -> {
+            return mapper.convert(repository.save(mapper.convert(user)));
         });
     }
 
-    public Response<User> findById(Long id, boolean withPassword) {
+    public Response<UserDto> findByLogin(String login) {
         return Response.EXECUTE(() -> {
-            Optional<User> user = repository.findById(id);
-            if (user.isPresent()) {
-                User result = user.get();
-                if (!withPassword) {
-                    result.setPassword(null);
-                }
-                return Response.OK(user.get());
+            Optional<UserDto> userDtoOptional = repository.findByLogin(login).map(mapper::convert);
+            if (userDtoOptional.isEmpty()) {
+                return Response.BAD("Нет пользователя с логином = %s", login);
             }
-            return Response.BAD("Пользователь с id %d не найден", id);
+            return Response.OK(userDtoOptional.get());
         });
     }
 
-    public Response<User> signIn(String login, String password) {
-        Response<User> user = this.findByLogin(login, true);
-        if (user.isSuccess()) {
-            if (!encoder.matches(password, user.getBody().getPassword())) {
-                return Response.BAD("Неверный пароль или логин");
+    public Response<UserDto> signIn(String login, String password) {
+        return Response.EXECUTE(() -> {
+            Response<UserDto> user = this.findByLogin(login);
+            if (!user.isSuccess()) {
+                return user;
             }
-        }
-        return user;
+            if (encoder.matches(password, user.getBody().getPassword())) {
+                return user;
+            }
+            return Response.BAD("Неверный пароль или логин");
+        });
     }
 }

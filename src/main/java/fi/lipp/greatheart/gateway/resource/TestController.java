@@ -1,26 +1,14 @@
 package fi.lipp.greatheart.gateway.resource;
 
 import fi.lipp.greatheart.gateway.configuration.JwtProvider;
-import fi.lipp.greatheart.gateway.domain.User;
-import fi.lipp.greatheart.gateway.resource.models.SignInDto;
-import fi.lipp.greatheart.gateway.service.CustomUserDetails;
+import fi.lipp.greatheart.gateway.service.UserDto;
 import fi.lipp.greatheart.gateway.service.UserService;
 import fi.lipp.greatheart.gateway.utils.Response;
-import io.jsonwebtoken.Jwts;
-import org.apache.logging.log4j.util.Strings;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.stream.Stream;
 
 @RestController
 public class TestController {
@@ -38,61 +26,44 @@ public class TestController {
     }
 
     @PostMapping("/sign_up")
-    public ResponseEntity<Response<User>> registerUser(@RequestBody User user) {
-        return Response.EXECUTE_RAW(() -> {
+    public ResponseEntity<Response<UserDto>> registerUser(@RequestBody UserDto user) {
+        return Response.EXECUTE(() -> {
             user.setPassword(encoder.encode(user.getPassword()));
-            return userService.saveUser(user, false);
+            Response<UserDto> saved = userService.saveUser(user);
+            if (!saved.isSuccess()) {
+                return saved;
+            }
+            UserDto result = saved.getBody();
+            result.setPassword("");
+            return Response.OK(result);
         }).makeResponse();
+
     }
 
     @PostMapping("/sign_in")
-    public ResponseEntity<Response<String>> auth(@RequestBody SignInDto signInDto) {
+    public ResponseEntity<Response<String>> auth(@RequestBody UserDto user) {
         return Response.EXECUTE(() -> {
-            Response<User> userFound = userService.signIn(signInDto.getLogin(), signInDto.getPassword());
-            if (!userFound.isSuccess()) {
-                return Response.BAD(userFound.getMessage());
+            Response<UserDto> userDto = userService.signIn(user.getLogin(), user.getPassword());
+            if (!userDto.isSuccess()) {
+                return Response.BAD(userDto.getMessage());
             }
-            String token = jwtProvider.generateToken(userFound.getBody().getLogin());
+            String token = jwtProvider.generateToken(userDto.getBody().getLogin());
             return Response.OK(token);
         }).makeResponse();
     }
 
-    @GetMapping("/validate_user")
-    public ResponseEntity<Response<User>> validateUser(HttpServletRequest request) {
+    @PostMapping("/validate_token")
+    public ResponseEntity<Response<UserDto>> validateToken(@RequestBody String token) {
         return Response.EXECUTE(() -> {
-            CustomUserDetails userDetails = (CustomUserDetails) request.getUserPrincipal();
-            return userService.findById(userDetails.getId(), false);
+            String login = jwtProvider.getLoginFromToken(token);
+            Response<UserDto> user = userService.findByLogin(login);
+            if (user.isSuccess()) {
+                UserDto userDto = user.getBody();
+                userDto.setPassword("");
+                return Response.OK(userDto);
+            }
+            return user;
         }).makeResponse();
-    }
-
-    @GetMapping("/validate_user_role")
-    public ResponseEntity<Response<User>> validateToken(HttpServletRequest request) {
-        return Response.EXECUTE(() -> {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            boolean access = true;
-            String trackerRole = request.getParameter("tracker");
-            String catalogRole = request.getParameter("catalog");
-
-            if (Strings.isNotBlank(trackerRole)) {
-                access = Stream.of(trackerRole.split(","))
-                    .allMatch(role -> checkRole(auth, CustomUserDetails.trackerRole(role)));
-            }
-
-            if (access && Strings.isNotBlank(catalogRole)) {
-                access = Stream.of(catalogRole.split(","))
-                    .allMatch(role -> checkRole(auth, CustomUserDetails.catalogRole(role)));
-            }
-
-            if (access) {
-                return userService.findById(Long.valueOf(request.getUserPrincipal().getName()), false);
-            } else {
-                return Response.BAD("Не хватает прав доступа", "");
-            }
-        }).makeResponse();
-    }
-
-    private boolean checkRole(Authentication auth, String role) {
-        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(role));
     }
 
 }

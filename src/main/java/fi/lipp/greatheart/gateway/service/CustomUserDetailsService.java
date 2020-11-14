@@ -1,6 +1,5 @@
 package fi.lipp.greatheart.gateway.service;
 
-import fi.lipp.greatheart.gateway.domain.User;
 import fi.lipp.greatheart.gateway.utils.Response;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,9 +16,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Response<User> user = userService.findByLogin(username, true);
+        Response<UserDto> user = userService.findByLogin(username);
         if (!user.isSuccess()) {
-            throw new UsernameNotFoundException(user.getMessage());
+            return CustomUserDetails.empty();
         }
         return CustomUserDetails.fromUserDtoToCustomUserDetails(user.getBody());
     }
