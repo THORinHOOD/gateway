@@ -23,7 +23,7 @@ public class StringArrayUserType implements UserType {
 
     @Override
     public Serializable disassemble(Object value) throws HibernateException {
-        return (Integer[]) this.deepCopy(value);
+        return (String[]) this.deepCopy(value);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class StringArrayUserType implements UserType {
         if (value == null) {
             statement.setNull(index, SQL_TYPES[0]);
         } else {
-            Integer[] castObject = (Integer[]) value;
+            String[] castObject = (String[]) value;
             Array array = connection.createArrayOf("text", castObject);
             statement.setArray(index, array);
         }
